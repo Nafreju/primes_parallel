@@ -9,10 +9,8 @@
 
 
 
-boost::lockfree::queue<int> queue(100);
-boost::atomic_int num_of_primes(0);
-
-
+boost::lockfree::queue<int> GLOBAL_QUEUE(100);
+boost::atomic_int NUM_OF_PRIMES(0);
 
 
 class PrimesPusher {
@@ -30,8 +28,8 @@ public:
     void push_primes(bool count_primes = true) {
         for (int i = this->range_from; i < this->range_to; ++i) {
             if (is_prime(i)) {
-                if (count_primes) ++num_of_primes;
-                while (!queue.push(i));
+                if (count_primes) ++NUM_OF_PRIMES;
+                while (!GLOBAL_QUEUE.push(i));
             }
         }
     }
@@ -41,7 +39,6 @@ public:
         this->push_primes();
     }
 };
-
 
 
 std::vector<PrimesPusher> create_primes_pusher(int thread_count, int block_size) {
@@ -56,19 +53,6 @@ std::vector<PrimesPusher> create_primes_pusher(int thread_count, int block_size)
 }
 
 
-boost::atomic<bool> done (false);
-boost::atomic_int consumer_count(0);
-void consumer(void)
-    {
-        int value;
-        while (!done) {
-            while (queue.pop(value))
-                ++consumer_count;
-        }
-
-        while (queue.pop(value))
-            ++consumer_count;
-    }
 
 //g++ -std=c++20 -O3 -o find_primes primes_finder.cpp -pthread -lboost_thread && ./find_primes
 //g++ (Ubuntu 10.3.0-1ubuntu1~20.04) 10.3.0
@@ -97,11 +81,11 @@ int main() {
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    std::cout  << "Found " << num_of_primes << " primes in " << elapsed.count() << " miliseconds \n";
+    std::cout  << "Found " << NUM_OF_PRIMES << " primes in " << elapsed.count() << " miliseconds \n";
 
 
     auto functor = [](auto){ return 0; };
-    size_t queue_size = queue.consume_all(functor);
+    size_t queue_size = GLOBAL_QUEUE.consume_all(functor);
 
     std::cout << "There were " << queue_size << " objects in queue" << std::endl;
 
